@@ -86,6 +86,10 @@ class AnonymousProxy(Proxy):
 
     __str__ = wrapped_function("__str__", None, True)
 
+    __call__ = wrapped_function("__call__", None, False)
+    __getitem__ = wrapped_function("__getitem__", None, False)
+
+
 
 def fetch_from_server(object_id):
     connection = HTTPConnection(*get_server_address())
@@ -139,7 +143,7 @@ def create_proxy(name, class_):
         synchronous = False
         if n in ("__len__", "__str__"):
             synchronous = True
-        elif n.startswith("__") and n not in ("__getitem__",):
+        elif n.startswith("__") and n not in ("__getitem__", "__call__"):
             continue
         members[n] = wrapped_function(n, f, synchronous)
 

@@ -189,6 +189,7 @@ if __name__ == "__main__":
         httpd.shutdown()
         server_thread.join()
         worker_thread.join()
+    signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
 
     server_thread.start()

@@ -25,10 +25,18 @@ def replace_orange_with_proxies():
             module = importlib.import_module(modname)
 
             new_module = globals()
+            module_name = __name__
             for part in modname.lstrip("Orange.").split("."):
-                if part not in new_module:
-                    new_module[part] = imp.new_module(part)
+                if new_module is globals():
+                    if part not in new_module:
+                        new_module[part] = imp.new_module(part)
                     new_module = new_module[part]
+                else:
+                    if not hasattr(new_module, part):
+                        setattr(new_module, part, imp.new_module(part))
+                    new_module = getattr(new_module, part)
+                module_name = '.'.join((module_name, part))
+                sys.modules[module_name] = new_module
 
             for name, class_ in inspect.getmembers(module, inspect.isclass):
                 if not class_.__module__.startswith("Orange"):
@@ -47,7 +55,6 @@ def replace_orange_with_proxies():
                     setattr(new_module, name, new_class)
 
         except ImportError as err:
-            import sys
             sys.stderr.write("Failed to load module %s: %s\n" % (modname, err))
 
 
