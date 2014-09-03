@@ -155,4 +155,4 @@ def create_proxy(name, class_):
     new_name = '%s_%s' % (class_.__module__.replace(".", "_"), name)
     new_class = type(new_name, (Proxy,), members)
     new_to_old[new_class] = class_
-    return new_name, new_class
+    return new_class

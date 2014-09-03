@@ -4,8 +4,11 @@ with remote.server('127.0.0.1:9465'):
     from Orange.classification.logistic_regression import LogisticRegressionLearner
 
 iris = Orange.data.Table('iris')
-print(iris)
+print(repr(iris))
 print(iris[1])
 
 logreg = LogisticRegressionLearner()(iris)
 print(logreg(iris[1]))
+
+iris2 = iris.get()
+print(repr(iris2))
