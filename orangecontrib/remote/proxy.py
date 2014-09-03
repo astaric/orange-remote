@@ -13,7 +13,7 @@ from orangecontrib.remote.commands import ExecutionFailedError
 
 
 def wrapped_member(member_name, member):
-    @wraps(member)
+    #@wraps(member)
     def function(self):
         __id__ = execute_on_server("call/%s.%s" % (self.__id__, member_name), object=self, member=str(member_name))
         return AnonymousProxy(__id__=__id__)
@@ -22,7 +22,7 @@ def wrapped_member(member_name, member):
 
 
 def wrapped_function(function_name, function, synchronous=False):
-    @wraps(function)
+    #@wraps(function)
     def function(self, *args, **kwargs):
         if function_name == "__init__":
             return

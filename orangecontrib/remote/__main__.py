@@ -10,6 +10,7 @@ import socketserver
 import threading
 import signal
 import uuid
+from orangecontrib.remote import RemoteModule
 
 from orangecontrib.remote.commands import Create, Call, Get, Command, execute_command, Promise
 
@@ -191,6 +192,8 @@ if __name__ == "__main__":
         worker_thread.join()
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
+
+    cache['contract'] = RemoteModule()
 
     server_thread.start()
     worker_thread.start()
