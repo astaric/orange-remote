@@ -8,7 +8,8 @@ import os
 import urllib.request
 
 import numpy as np
-from orangecontrib.remote.server.commands import ExecutionFailedError
+
+from orangecontrib.remote.commands import ExecutionFailedError
 
 
 def wrapped_member(member_name, member):

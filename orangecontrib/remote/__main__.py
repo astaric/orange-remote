@@ -8,11 +8,11 @@ import queue
 import shutil
 import socketserver
 import threading
-import traceback
 import signal
-
-from orangecontrib.remote.server.commands import Create, Call, Get, Command, execute_command, Promise
 import uuid
+
+from orangecontrib.remote.commands import Create, Call, Get, Command, execute_command, Promise
+
 
 class Cache(dict):
     events = {}

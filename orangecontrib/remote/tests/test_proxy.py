@@ -1,14 +1,13 @@
-from http.client import HTTPConnection
 import logging
 import os
 from socketserver import TCPServer
 import threading
 import unittest
-from Orange.remote import create_proxy, Proxy
-from Orange.remote.tests.dummies import DummyIterable, DummyClass
 
-import Orange.server.__main__ as orange_server
-from Orange.server.commands import ExecutionFailedError
+from orangecontrib.remote import create_proxy, Proxy
+from orangecontrib.remote.tests.dummies import DummyIterable, DummyClass
+import orangecontrib.remote.__main__ as orange_server
+from orangecontrib.remote.server_.commands import ExecutionFailedError
 
 
 class OrangeServerTests(unittest.TestCase):

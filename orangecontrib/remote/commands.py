@@ -3,7 +3,7 @@ import importlib
 import logging
 import traceback
 
-DEBUG = True
+DEBUG = False
 
 
 class Promise:

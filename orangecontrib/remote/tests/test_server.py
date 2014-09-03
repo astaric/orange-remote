@@ -3,8 +3,9 @@ import pickle
 from socketserver import TCPServer
 import threading
 import unittest
-from Orange.server import __main__ as orange_server
-from Orange.server.__main__ import ExecutionFailedError
+
+from orangecontrib.remote import __main__ as orange_server
+from orangecontrib.remote.server_.commands import ExecutionFailedError
 
 
 class OrangeServerTests(unittest.TestCase):
