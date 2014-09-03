@@ -9,6 +9,23 @@ import Orange
 from orangecontrib.remote.proxy import Proxy, get_server_address, wrapped_function, wrapped_member, create_proxy
 
 
+class ModuleDescription:
+    def __init__(self, module, known_classes):
+        self.members = {}
+
+        for name, class_ in inspect.getmembers(module, inspect.isclass):
+            if not class_.__module__.startswith("Orange"):
+                continue
+
+            self.members[name] = known_classes.setdefault(
+                class_, ClassDescription(class_))
+
+
+class ClassDescription:
+    def __init__(self, class_):
+        self.member = create_proxy(class_.__name__, class_)
+
+
 class RemoteModule:
     excluded_modules = ["Orange.test", "Orange.canvas", "Orange.widgets"]
     _old_sys_modules = None
@@ -18,8 +35,9 @@ class RemoteModule:
         self.modules = self.create_module(proxies)
 
     def create_proxies(self, module):
-        modules = {module.__name__: {}}
-        old_to_new = {}
+        cache = {}
+        modules = {module.__name__: ModuleDescription(module, cache)}
+
         for modname in self.list_submodules(module):
             try:
                 submodule = importlib.import_module(modname)
@@ -28,17 +46,8 @@ class RemoteModule:
                                  (modname, err))
                 continue
 
-            submodule_dict = modules[submodule.__name__] = {}
+            modules[submodule.__name__] = ModuleDescription(submodule, cache)
 
-            for name, class_ in inspect.getmembers(submodule, inspect.isclass):
-                if not class_.__module__.startswith("Orange"):
-                    continue
-
-                if class_ in old_to_new:
-                    submodule_dict[name] = old_to_new[class_]
-                else:
-                    old_to_new[class_] = submodule_dict[name] = \
-                        create_proxy(name, class_)
         return modules
 
     def list_submodules(self, module):
@@ -49,6 +58,9 @@ class RemoteModule:
                    for excluded_module in self.excluded_modules):
                 continue
             yield modname
+
+    def create_proxy(self, name, class_):
+        return create_proxy(name, class_)
 
     def create_module(self, proxies):
         proxies_module = imp.new_module('proxies')
@@ -74,8 +86,8 @@ class RemoteModule:
                 current_module = getattr(current_module, submodule)
             modules[modname] = current_module
 
-            for name, class_ in proxies[modname].items():
-                setattr(current_module, name, class_)
+            for name, class_ in proxies[modname].members.items():
+                setattr(current_module, name, class_.member)
 
         return modules
 
@@ -94,6 +106,7 @@ class RemoteModule:
 
     def uninstall(self):
         sys.modules = self._old_sys_modules
+
 
 remote_orange = RemoteModule()
 
