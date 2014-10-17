@@ -1,0 +1,4 @@
+
+[id=b]
+
+setattr(b, 'attributes', []) [id=d]

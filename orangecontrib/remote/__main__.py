@@ -10,7 +10,7 @@ import socketserver
 import threading
 import signal
 import uuid
-from orangecontrib.remote import RemoteModule
+from orangecontrib.remote import RemoteOrange
 
 from orangecontrib.remote.commands import Create, Call, Get, Command, execute_command, Promise
 
@@ -23,6 +23,7 @@ logger = logging.getLogger("orange_server")
 cache = Cache()
 
 Promise.__cache__ = cache
+
 
 class Proxy:
     __id__ = None
@@ -193,7 +194,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
 
-    cache['contract'] = RemoteModule()
+    cache['contract'] = RemoteOrange()
 
     server_thread.start()
     worker_thread.start()

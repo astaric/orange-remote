@@ -5,11 +5,12 @@ import threading
 import unittest
 
 from orangecontrib.remote import __main__ as orange_server
-from orangecontrib.remote.server_.commands import ExecutionFailedError
+from orangecontrib.remote.__main__ import CommandProcessor
+from orangecontrib.remote.commands import ExecutionFailedError
 
 
 class OrangeServerTests(unittest.TestCase):
-    server = server_thread = None
+    server = worker = server_thread = worker_thread = None
 
     @classmethod
     def setUpClass(cls):
@@ -19,13 +20,23 @@ class OrangeServerTests(unittest.TestCase):
             target=cls.server.serve_forever,
             kwargs={'poll_interval': 0.01}
         )
+        cls.worker = CommandProcessor()
+        cls.worker_thread = threading.Thread(
+            name='Processing queue',
+            target=cls.worker.run,
+            kwargs={'poll_interval': 1}
+        )
         cls.server_thread.start()
+        cls.worker_thread.start()
 
     @classmethod
     def tearDownClass(cls):
         cls.server.shutdown()
+        cls.worker.shutdown()
         cls.server_thread.join()
+        cls.worker_thread.join()
         cls.server.server_close()
+
 
     def setUp(self):
         self.server_connection = HTTPConnection(*self.server.server_address)
@@ -109,8 +120,9 @@ class OrangeServerTests(unittest.TestCase):
         response = self.server_connection.getresponse()
 
         self.assertEqual(response.status, 200)
-        object_id = self.read_data(response)
-        self.assertEqual(orange_server.cache[object_id], None)
+        result_id = self.read_data(response)
+        orange_server.cache.events[result_id].wait()
+        self.assertEqual(orange_server.cache[result_id], None)
         self.assertEqual(orange_server.cache['x'], ['x'])
 
 

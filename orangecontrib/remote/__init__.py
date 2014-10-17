@@ -4,9 +4,7 @@ import pkgutil
 import importlib
 import sys
 import imp
-import pickle
 
-import Orange
 from orangecontrib.remote.proxy import Proxy, get_server_address, \
     wrapped_function, wrapped_member, AnonymousProxy
 
@@ -65,10 +63,10 @@ class ClassDescription:
 
 
 class RemoteModule:
-    excluded_modules = ["Orange.test", "Orange.canvas", "Orange.widgets"]
+    excluded_modules = []
     _old_sys_modules = None
 
-    def __init__(self, module=Orange):
+    def __init__(self, module):
         self.descriptions = self.create_descriptions(module)
 
         self.modules = self.create_module(self.descriptions)
@@ -111,7 +109,7 @@ class RemoteModule:
             else:
                 root = modname
                 roots.append(root)
-                modules[root] = self.create_submodule(None, modname)
+                modules[root] = self.create_submodule(proxies_module, modname)
 
             current_module = modules[root]
             for submodule in modname[len(root) + 1:].split('.'):
@@ -138,6 +136,10 @@ class RemoteModule:
         return module
 
     def install(self):
+        for name in self.modules:
+            importlib.import_module(name)
+            print(name)
+        print(sys.modules)
         self._old_sys_modules = sys.modules.copy()
         sys.modules.update(self.modules)
 
@@ -152,6 +154,14 @@ class RemoteModule:
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.modules = self.create_module(self.descriptions)
+
+
+class RemoteOrange(RemoteModule):
+    excluded_modules = ["Orange.test", "Orange.canvas", "Orange.widgets"]
+
+    def __init__(self):
+        import Orange
+        super().__init__(Orange)
 
 
 def get_contract(address):

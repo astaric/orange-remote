@@ -6,6 +6,7 @@ import json
 import pickle
 import os
 import urllib.request
+import sys
 
 import numpy as np
 
@@ -78,7 +79,6 @@ class Proxy:
             yield self[i]
 
 
-
 class AnonymousProxy(Proxy):
     def __getattribute__(self, item):
         if item in {"__id__", "get"}:
@@ -89,7 +89,6 @@ class AnonymousProxy(Proxy):
 
     __call__ = wrapped_function("__call__", None, False)
     __getitem__ = wrapped_function("__getitem__", None, False)
-
 
 
 def fetch_from_server(object_id):
