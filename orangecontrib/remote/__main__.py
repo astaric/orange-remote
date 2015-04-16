@@ -11,7 +11,7 @@ import threading
 import signal
 import uuid
 import Orange
-from orangecontrib.remote import RemoteModule
+from orangecontrib.remote import RemoteModule, get_state
 
 from orangecontrib.remote.commands import Create, Call, Get, Command, execute_command, Promise
 
@@ -38,24 +38,37 @@ class OrangeServer(BaseHTTPRequestHandler):
         super(OrangeServer, self).__init__(request, client_address, server)
 
     def do_GET(self):
-        resource_id = self.path.strip("/")
+        f = None
+        try:
+            resource = self.path.strip("/")
+            result_type, resource_id = resource.split("/")
 
-        if resource_id in cache.events:
-            cache.events[resource_id].wait()
-        if resource_id not in cache:
-            return self.send_error(404, "Resource {} not found".format(resource_id))
+            if result_type == 'object':
+                if resource_id in cache.events:
+                    cache.events[resource_id].wait()
+                if resource_id not in cache:
+                    return self.send_error(404, "Resource {} not found".format(resource_id))
 
-        buf = pickle.dumps(cache[resource_id])
-        f = io.BytesIO(buf)
-        self.send_response(200)
-        self.send_header("Content-Type", "application/octet-stream")
-        self.send_header("Content-Disposition", "attachment;filename={}.pickle"
-                                                .format(resource_id))
-        self.send_header("Content-Length", str(len(buf)))
-        self.end_headers()
+                buf = pickle.dumps(cache[resource_id])
+            elif result_type == 'state':
+                buf = pickle.dumps(get_state(resource_id))
+            else:
+                return self.send_error(400, "Unknown resource type")
+            f = io.BytesIO(buf)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Disposition", "attachment;filename={}.pickle"
+                                                    .format(resource_id))
+            self.send_header("Content-Length", str(len(buf)))
+            self.end_headers()
 
-        shutil.copyfileobj(f, self.wfile)
-        f.close()
+            shutil.copyfileobj(f, self.wfile)
+        except Exception as ex:
+            print("error", ex)
+            logger.error(ex)
+        finally:
+            if f is not None:
+                f.close()
 
     def do_POST(self):
         result_id = str(uuid.uuid1())
@@ -139,7 +152,7 @@ class CommandProcessor:
                 result_id, command = self._execution_queue.get(block=True, timeout=poll_interval)
                 logger.info("Received command")
                 command.resolve_promises()
-                cache[result_id] = execution_pool.apply(execute_command, [command])
+                cache[result_id] = execution_pool.apply(execute_command, [result_id, command])
                 cache.events[result_id].set()
             except queue.Empty:
                 continue

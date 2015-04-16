@@ -64,7 +64,10 @@ class Proxy:
         return self
 
     def get(self):
-        return fetch_from_server(self.__id__)
+        return fetch_from_server('object/' + self.__id__)
+
+    def get_state(self):
+        return fetch_from_server('state/' + self.__id__)
 
     def __getattr__(self, item):
         if item in {"__getnewargs__", "__getstate__", "__setstate__"}:

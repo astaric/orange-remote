@@ -99,8 +99,8 @@ class Get(Command):
 logger = logging.getLogger("worker")
 
 
-def execute_command(command):
-    print("Executing command %s" % command)
+def execute_command(id, command):
+    #print("Executing command %s" % command)
     try:
         return command.execute()
     except Exception as err:

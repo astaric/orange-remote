@@ -177,4 +177,9 @@ def server(address):
         builtins.__import__ = old_import
 
 
-print("Using Orange Server %s:%s" % get_server_address())
+def get_state(id):
+    pass
+
+
+def save_state(state):
+    pass
