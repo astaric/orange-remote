@@ -11,9 +11,10 @@ import threading
 import signal
 import uuid
 import Orange
-from orangecontrib.remote import RemoteModule, get_state
+from orangecontrib.remote import RemoteModule
 
-from orangecontrib.remote.commands import Create, Call, Get, Command, execute_command, Promise
+from orangecontrib.remote.commands import Create, Call, Get, Command,\
+    execute_command, Promise, get_state
 
 
 class Cache(dict):

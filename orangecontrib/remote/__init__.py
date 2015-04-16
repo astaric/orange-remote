@@ -8,6 +8,7 @@ import builtins
 
 from orangecontrib.remote.proxy import Proxy, get_server_address, \
     wrapped_function, wrapped_member, AnonymousProxy
+from orangecontrib.remote.commands import save_state
 
 
 class ModuleDescription:
@@ -175,11 +176,3 @@ def server(address):
         builtins.__import__ = new_import
         yield
         builtins.__import__ = old_import
-
-
-def get_state(id):
-    pass
-
-
-def save_state(state):
-    pass

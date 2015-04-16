@@ -1,6 +1,8 @@
 """ Commands that can be executed on the server. """
 import importlib
 import logging
+import os
+import pickle
 import traceback
 
 DEBUG = False
@@ -102,6 +104,7 @@ logger = logging.getLogger("worker")
 def execute_command(id, command):
     #print("Executing command %s" % command)
     try:
+        save_state.__id__ = id
         return command.execute()
     except Exception as err:
         print("Execution failed with error: %s" % err)
@@ -109,6 +112,21 @@ def execute_command(id, command):
             raise
 
         return ExecutionFailedError(command, err)
+
+
+def save_state(state):
+    fn = os.path.join(os.path.dirname(__file__), save_state.__id__)
+    with open(fn, 'wb') as f:
+        pickle.dump(state, f, -1)
+
+
+def get_state(id):
+    try:
+        fn = os.path.join(os.path.dirname(__file__), id)
+        with open(fn, 'rb') as f:
+            return pickle.load(f)
+    except Exception:
+        pass
 
 
 class ExecutionFailedError(Exception):
