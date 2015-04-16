@@ -3,10 +3,9 @@ import inspect
 import pkgutil
 import importlib
 import sys
-import imp
-import pickle
+import types
+import builtins
 
-import Orange
 from orangecontrib.remote.proxy import Proxy, get_server_address, \
     wrapped_function, wrapped_member, AnonymousProxy
 
@@ -47,10 +46,10 @@ class ClassDescription:
                        "__originalmodule__": self.module}
             for n in self.functions:
                 synchronous = n in ("__len__", "__str__")
-                members[n] = wrapped_function(n, None, synchronous)
+                members[n] = wrapped_function(n, synchronous)
 
             for n in self.members:
-                members[n] = wrapped_member(n, None)
+                members[n] = wrapped_member(n)
 
             new_name = '%s_%s' % (self.module.replace(".", "_"), self.name)
             self._member = type(new_name, (Proxy,), members)
@@ -65,12 +64,10 @@ class ClassDescription:
 
 
 class RemoteModule:
-    excluded_modules = ["Orange.test", "Orange.canvas", "Orange.widgets"]
-    _old_sys_modules = None
+    def __init__(self, module, exclude=()):
+        self.excluded_modules = exclude
 
-    def __init__(self, module=Orange):
         self.descriptions = self.create_descriptions(module)
-
         self.modules = self.create_module(self.descriptions)
 
     def create_descriptions(self, module):
@@ -99,7 +96,7 @@ class RemoteModule:
             yield modname
 
     def create_module(self, proxies):
-        proxies_module = imp.new_module('proxies')
+        proxies_module = types.ModuleType('proxies')
         sys.modules['proxies'] = proxies_module
 
         roots = []
@@ -130,19 +127,17 @@ class RemoteModule:
 
     @staticmethod
     def create_submodule(parent, name):
-        module = imp.new_module(name)
+        module = types.ModuleType(name)
         if parent is not None:
             setattr(parent, name, module)
             name = '.'.join((parent.__name__, name))
         module.__name__ = name
         return module
 
-    def install(self):
-        self._old_sys_modules = sys.modules.copy()
-        sys.modules.update(self.modules)
-
-    def uninstall(self):
-        sys.modules = self._old_sys_modules
+    def __import__(self, name):
+        if name in self.modules:
+            return self.modules[name]
+        raise ImportError
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -155,6 +150,11 @@ class RemoteModule:
 
 
 def get_contract(address):
+    """
+    :param address:
+    :return:
+    :rtype: RemoteModule
+    """
     return AnonymousProxy(__id__='contract').get()
 
 
@@ -164,9 +164,17 @@ def server(address):
         yield
     else:
         remote_orange = get_contract(address)
-        remote_orange.install()
+        old_import = builtins.__import__
+
+        def new_import(name, globals=None, locals=None, fromlist=(), level=0):
+            try:
+                return remote_orange.__import__(name)
+            except ImportError:
+                return old_import(name, globals, locals, fromlist, level)
+
+        builtins.__import__ = new_import
         yield
-        remote_orange.uninstall()
+        builtins.__import__ = old_import
 
 
 print("Using Orange Server %s:%s" % get_server_address())

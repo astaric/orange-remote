@@ -71,7 +71,7 @@ class Call(Command):
         args = list(map(str, self.args))
         args.extend("%s=%s" % (k, v) for k, v in self.kwargs.items())
         return "{}.{}({})".format(
-            self.object, self.method, ", ".join(args)
+            repr(self.object), self.method, ", ".join(map(repr, args))
         )
 
     def resolve_promises(self, *args):

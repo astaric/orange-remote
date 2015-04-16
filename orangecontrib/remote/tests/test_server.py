@@ -5,7 +5,7 @@ import threading
 import unittest
 
 from orangecontrib.remote import __main__ as orange_server
-from orangecontrib.remote.server_.commands import ExecutionFailedError
+from orangecontrib.remote.commands import ExecutionFailedError
 
 
 class OrangeServerTests(unittest.TestCase):
@@ -110,7 +110,7 @@ class OrangeServerTests(unittest.TestCase):
 
         self.assertEqual(response.status, 200)
         object_id = self.read_data(response)
-        self.assertEqual(orange_server.cache[object_id], None)
+        self.assertEqual(orange_server.cache.get(object_id), None)
         self.assertEqual(orange_server.cache['x'], ['x'])
 
 

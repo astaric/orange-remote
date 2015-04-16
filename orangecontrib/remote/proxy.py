@@ -12,17 +12,15 @@ import numpy as np
 from orangecontrib.remote.commands import ExecutionFailedError
 
 
-def wrapped_member(member_name, member):
-    #@wraps(member)
+def wrapped_member(member_name):
     def function(self):
-        __id__ = execute_on_server("call/%s.%s" % (self.__id__, member_name), object=self, member=str(member_name))
+        __id__ = execute_on_server("call/%s.%s" % (self.__id__[:8], '__getattribute__'), object=self, method='__getattribute__', args=[str(member_name)])
         return AnonymousProxy(__id__=__id__)
 
     return property(function)
 
 
-def wrapped_function(function_name, function, synchronous=False):
-    #@wraps(function)
+def wrapped_function(function_name, synchronous=False):
     def function(self, *args, **kwargs):
         if function_name == "__init__":
             return
@@ -71,7 +69,7 @@ class Proxy:
     def __getattr__(self, item):
         if item in {"__getnewargs__", "__getstate__", "__setstate__"}:
             raise AttributeError
-        return wrapped_member(item, lambda: None).fget(self)
+        return wrapped_member(item).fget(self)
 
     def __iter__(self):
         for i in range(len(self)):
@@ -81,14 +79,14 @@ class Proxy:
 
 class AnonymousProxy(Proxy):
     def __getattribute__(self, item):
-        if item in {"__id__", "get"}:
+        if item in {"__id__", "get", "__class__"}:
             return super().__getattribute__(item)
-        return wrapped_function(item, lambda: None)
+        return wrapped_member(item).fget(self)
 
-    __str__ = wrapped_function("__str__", None, True)
+    __str__ = wrapped_function("__str__", True)
 
-    __call__ = wrapped_function("__call__", None, False)
-    __getitem__ = wrapped_function("__getitem__", None, False)
+    __call__ = wrapped_function("__call__", False)
+    __getitem__ = wrapped_function("__getitem__", False)
 
 
 
@@ -136,7 +134,6 @@ new_to_old = {}
 
 
 def create_proxy(name, class_):
-    #class_.__bases__ = tuple([new_to_old.get(b, b) for b in class_.__bases__])
     members = {"__module__": "proxies",
                "__originalclass__": class_.__name__,
                "__originalmodule__": class_.__module__}
@@ -146,14 +143,15 @@ def create_proxy(name, class_):
             synchronous = True
         elif n.startswith("__") and n not in ("__getitem__", "__call__"):
             continue
-        members[n] = wrapped_function(n, f, synchronous)
+        members[n] = wrapped_function(n, synchronous)
 
     for n, p in inspect.getmembers(class_, inspect.isdatadescriptor):
         if n.startswith("__"):
             continue
-        members[n] = wrapped_member(n, p)
+        members[n] = wrapped_member(n)
 
     new_name = '%s_%s' % (class_.__module__.replace(".", "_"), name)
     new_class = type(new_name, (Proxy,), members)
     new_to_old[new_class] = class_
     return new_class
+

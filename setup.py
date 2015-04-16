@@ -51,9 +51,6 @@ SETUP_REQUIRES = (
 )
 
 INSTALL_REQUIRES = (
-   'Orange',
-   'setuptools',
-   'numpy',
 )
 
 EXTRAS_REQUIRE = {
