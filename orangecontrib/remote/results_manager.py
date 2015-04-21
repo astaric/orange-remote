@@ -24,3 +24,7 @@ class ResultsManager:
     @classmethod
     def has_result(cls, resource_id):
         return resource_id in cls.results
+
+    @classmethod
+    def awaiting_result(cls, resource_id):
+        return resource_id in cls.events

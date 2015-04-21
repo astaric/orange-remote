@@ -88,7 +88,7 @@ class Proxy:
 
 class AnonymousProxy(Proxy):
     def __getattribute__(self, item):
-        if item in {"__id__", "get", "__class__"}:
+        if item in {"__id__", "get", "get_state", "abort",  "__class__"}:
             return super().__getattribute__(item)
         return wrapped_member(item).fget(self)
 

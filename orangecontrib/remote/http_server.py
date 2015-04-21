@@ -7,7 +7,8 @@ import pickle
 import shutil
 import uuid
 from orangecontrib.remote.command_processor import CommandProcessor
-from orangecontrib.remote.commands import Command, Create, Call, Get, Promise
+from orangecontrib.remote.commands import Command, Create, Call, Get, Promise, \
+    Abort
 from orangecontrib.remote.results_manager import ResultsManager
 from orangecontrib.remote.state_manager import StateManager
 
@@ -102,13 +103,16 @@ class OrangeServer(BaseHTTPRequestHandler):
         if 'get' in pairs:
             return Get(**pairs['get'])
 
+        if 'abort' in pairs:
+            return Abort(**pairs['abort'])
+
         if '__jsonclass__' in pairs:
             constructor, param = pairs['__jsonclass__']
             if constructor == "Promise":
                 try:
-                    if param in cache:
-                        return cache[param]
-                    elif param in cache.events:
+                    if ResultsManager.has_result(param):
+                        return ResultsManager.get_result(param)
+                    elif ResultsManager.awaiting_result(param):
                         return Promise(param)
                 except:
                     raise ValueError("Unknown promise '%s'" % param)
