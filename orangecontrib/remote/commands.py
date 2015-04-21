@@ -1,25 +1,22 @@
 """ Commands that can be executed on the server. """
 import importlib
 import logging
-import os
-import pickle
-import traceback
+
+from orangecontrib.remote.results_manager import ResultsManager
+from orangecontrib.remote.state_manager import StateManager
 
 DEBUG = False
 
 
 class Promise:
-    __cache__ = None
-
     def __init__(self, id):
         self.id = id
 
     def get(self):
-        self.__cache__.events[self.id].wait()
-        return self.__cache__[self.id]
+        return ResultsManager.get_result(self.id)
 
     def ready(self):
-        return self.id in self.__cache__
+        return ResultsManager.has_result(self.id)
 
 
 class Command:
@@ -98,6 +95,10 @@ class Get(Command):
             return getattr(self.object, self.member)
 
 
+class Abort(Command):
+    id = ""
+
+
 logger = logging.getLogger("worker")
 
 
@@ -105,37 +106,26 @@ def execute_command(id, command):
     #print("Executing command %s" % command)
     try:
         logger.debug('Execution started: ' + id)
-        save_state.__id__ = id
+        StateManager.set_id(id)
         value = command.execute()
         logger.debug('Execution completed: ' + id)
-        return value
+        return id, value
     except Exception as err:
-        logger.debug("Execution failed with error: %s" % err)
-        if DEBUG:
-            raise
+        logger.debug("Execution failed: " + id)
+        logger.debug("Error was: " + str(err))
 
-        return ExecutionFailedError(command, err)
-
-
-def save_state(state):
-    fn = os.path.join(os.path.dirname(__file__), save_state.__id__)
-    with open(fn, 'wb') as f:
-        pickle.dump(state, f, -1)
+        return id, ExecutionFailed(command, err)
 
 
-def get_state(id):
-    try:
-        fn = os.path.join(os.path.dirname(__file__), id)
-        with open(fn, 'rb') as f:
-            return pickle.load(f)
-    except Exception:
-        pass
-
-
-class ExecutionFailedError(Exception):
+class ExecutionFailed:
     def __init__(self, command=None, error=None):
         if not command or not error:
             return
         self.message = "Execution of {} failed with error: {}".format(command, error)
-        self.traceback = traceback.format_exc()
-        super().__init__(self.message)
+
+    def raise_(self):
+        raise(RemoteException(self.message))
+
+
+class RemoteException(Exception):
+    pass

@@ -5,10 +5,12 @@ import importlib
 import sys
 import types
 import builtins
+import os
 
+from orangecontrib.remote.command_processor import CommandProcessor
 from orangecontrib.remote.proxy import Proxy, get_server_address, \
     wrapped_function, wrapped_member, AnonymousProxy
-from orangecontrib.remote.commands import save_state
+from orangecontrib.remote.state_manager import StateManager
 
 
 class ModuleDescription:
@@ -176,3 +178,11 @@ def server(address):
         builtins.__import__ = new_import
         yield
         builtins.__import__ = old_import
+
+
+def save_state(state):
+    return StateManager.save_state(state)
+
+
+def aborted():
+    return os.path.exists(os.path.join(CommandProcessor.aborted_commands_path, StateManager.__id__))

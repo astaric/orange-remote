@@ -6,6 +6,7 @@ import unittest
 
 from orangecontrib.remote import __main__ as orange_server
 from orangecontrib.remote.commands import ExecutionFailedError
+from orangecontrib.remote.http_server import OrangeServer
 
 
 class OrangeServerTests(unittest.TestCase):
@@ -13,7 +14,7 @@ class OrangeServerTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.server = TCPServer(('localhost', 0), orange_server.OrangeServer)
+        cls.server = TCPServer(('localhost', 0), OrangeServer)
         cls.server_thread = threading.Thread(
             name='Orange server serving',
             target=cls.server.serve_forever,

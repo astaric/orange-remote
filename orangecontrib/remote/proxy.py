@@ -1,15 +1,15 @@
 import base64
-from functools import wraps
 from http.client import HTTPConnection
 import inspect
 import json
 import pickle
 import os
 import urllib.request
+import Orange
 
 import numpy as np
 
-from orangecontrib.remote.commands import ExecutionFailedError
+from orangecontrib.remote.commands import ExecutionFailed
 
 
 def wrapped_member(member_name):
@@ -44,6 +44,8 @@ class ProxyEncoder(json.JSONEncoder):
             return {"__jsonclass__": ('Promise', o.__id__)}
         if isinstance(o, np.ndarray):
             return {"__jsonclass__": ('PyObject', base64.b64encode(pickle.dumps(o)).decode("ascii"))}
+        if isinstance(o, Orange.data.Table):
+            return {"__jsonclass__": ('PyObject', base64.b64encode(pickle.dumps(o)).decode("ascii"))}
         return json.JSONEncoder.default(self, o)
 
 
@@ -69,6 +71,10 @@ class Proxy:
     def get_state(self):
         return fetch_from_server('state/' + self.__id__)
 
+    def abort(self):
+        execute_on_server("abort",
+                          id=self.__id__)
+
     def __getattr__(self, item):
         if item in {"__getnewargs__", "__getstate__", "__setstate__"}:
             raise AttributeError
@@ -92,7 +98,6 @@ class AnonymousProxy(Proxy):
     __getitem__ = wrapped_function("__getitem__", False)
 
 
-
 def fetch_from_server(object_id):
     connection = HTTPConnection(*get_server_address())
     connection.request("GET", object_id)
@@ -103,8 +108,8 @@ def fetch_from_server(object_id):
         result = pickle.loads(response_data)
     else:
         result = response_data.decode('utf-8')
-    if isinstance(result, ExecutionFailedError):
-        raise result
+    if isinstance(result, ExecutionFailed):
+        result.raise_()
     else:
         return result
 

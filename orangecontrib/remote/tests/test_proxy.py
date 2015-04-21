@@ -5,6 +5,8 @@ import threading
 import unittest
 
 from orangecontrib.remote import Proxy
+from orangecontrib.remote.command_processor import CommandProcessor
+from orangecontrib.remote.http_server import OrangeServer
 from orangecontrib.remote.proxy import create_proxy
 from orangecontrib.remote.tests.dummies import DummyIterable, DummyClass
 import orangecontrib.remote.__main__ as orange_server
@@ -16,14 +18,14 @@ class OrangeServerTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.server = TCPServer(('localhost', 0), orange_server.OrangeServer)
+        cls.server = TCPServer(('localhost', 0), OrangeServer)
         cls.server_thread = threading.Thread(
             name='Orange server serving',
             target=cls.server.serve_forever,
             kwargs={'poll_interval': 0.01}
         )
         cls.server_thread.start()
-        cls.worker = orange_server.CommandProcessor()
+        cls.worker = CommandProcessor()
         cls.worker_thread = threading.Thread(
             name='Processing thread',
             target=cls.worker.run,
