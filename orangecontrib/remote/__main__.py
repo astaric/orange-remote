@@ -153,7 +153,11 @@ class CommandProcessor:
                 result_id, command = self._execution_queue.get(block=True, timeout=poll_interval)
                 logger.info("Received command")
                 command.resolve_promises()
-                cache[result_id] = execution_pool.apply(execute_command, [result_id, command])
+                logger.info("Apply")
+                def callback(value):
+                    cache[result_id] = value
+                execution_pool.apply_async(execute_command, [result_id, command], callback=callback)
+                logger.info("Done")
                 cache.events[result_id].set()
             except queue.Empty:
                 continue
