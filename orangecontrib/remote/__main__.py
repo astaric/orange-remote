@@ -1,3 +1,4 @@
+import base64
 from http.server import BaseHTTPRequestHandler
 import io
 import json
@@ -132,6 +133,8 @@ class OrangeServer(BaseHTTPRequestHandler):
                     raise ValueError("Unknown promise '%s'" % param)
             elif constructor == "slice":
                 return slice(*param)
+            elif constructor == "PyObject":
+                return pickle.loads(base64.b64decode(param))
 
         return pairs
 
