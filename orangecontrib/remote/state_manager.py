@@ -28,8 +28,10 @@ class StateManager:
                              "but no id was provided")
 
         fn = os.path.join(cls.storage_path, id)
-        with open(fn, 'wb') as f:
+        tmpfn = fn + '.new'
+        with open(tmpfn, 'wb') as f:
             pickle.dump(state, f, -1)
+        os.replace(tmpfn, fn)
 
     @classmethod
     def delete_state(cls, id):
