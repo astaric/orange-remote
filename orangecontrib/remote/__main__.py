@@ -41,6 +41,7 @@ class OrangeServer(BaseHTTPRequestHandler):
     def do_GET(self):
         f = None
         try:
+            logger.debug("GET " + self.path)
             resource = self.path.strip("/")
             result_type, resource_id = resource.split("/")
 
@@ -65,8 +66,7 @@ class OrangeServer(BaseHTTPRequestHandler):
 
             shutil.copyfileobj(f, self.wfile)
         except Exception as ex:
-            print("error", ex)
-            logger.error(ex)
+            logger.exception(ex)
         finally:
             if f is not None:
                 f.close()
@@ -80,9 +80,8 @@ class OrangeServer(BaseHTTPRequestHandler):
                 CommandProcessor.queue((result_id, data))
             else:
                 cache[result_id] = data
-        except AttributeError as err:
-            return self.send_error(400, str(err))
-        except ValueError as err:
+        except Exception as err:
+            logger.exception(err)
             return self.send_error(400, str(err))
 
         encoded = result_id.encode('utf-8')
@@ -150,20 +149,24 @@ class CommandProcessor:
 
         while self._is_running:
             try:
+                logger.debug("Waiting for command")
                 result_id, command = self._execution_queue.get(block=True, timeout=poll_interval)
-                logger.info("Received command")
+                logger.info("Received command " + result_id)
                 command.resolve_promises()
-                logger.info("Apply")
+
                 def callback(value):
                     cache[result_id] = value
+                    cache.events[result_id].set()
                 execution_pool.apply_async(execute_command, [result_id, command], callback=callback)
-                logger.info("Done")
-                cache.events[result_id].set()
+
             except queue.Empty:
                 continue
 
-        execution_pool.close()
-        self.logger.info("Worker shutdown")
+        self.logger.debug("Terminating execution pool")
+        execution_pool.terminate()
+        self.logger.debug("Joining execution pool")
+        execution_pool.join()
+        self.logger.info("Worker is no more")
 
     @classmethod
     def queue(cls, command):
@@ -176,7 +179,7 @@ class CommandProcessor:
 
 if __name__ == "__main__":
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
         datefmt='%m-%d %H:%M')
 

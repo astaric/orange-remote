@@ -29,7 +29,7 @@ def wrapped_function(function_name, synchronous=False):
                                                          ",".join(map(str, args)), ""),
                                    object=self, method=str(function_name), args=args, kwargs=kwargs)
         if synchronous:
-            return fetch_from_server(__id__)
+            return fetch_from_server('object/' + __id__)
         else:
             return AnonymousProxy(__id__=__id__)
 

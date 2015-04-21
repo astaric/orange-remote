@@ -104,10 +104,13 @@ logger = logging.getLogger("worker")
 def execute_command(id, command):
     #print("Executing command %s" % command)
     try:
+        logger.debug('Execution started: ' + id)
         save_state.__id__ = id
-        return command.execute()
+        value = command.execute()
+        logger.debug('Execution completed: ' + id)
+        return value
     except Exception as err:
-        print("Execution failed with error: %s" % err)
+        logger.debug("Execution failed with error: %s" % err)
         if DEBUG:
             raise
 
