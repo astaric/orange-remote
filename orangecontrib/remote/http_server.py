@@ -37,6 +37,13 @@ class OrangeServer(BaseHTTPRequestHandler):
                     buf = pickle.dumps(ResultsManager.get_result(resource_id))
                 else:
                     buf = pickle.dumps(StateManager.get_state(resource_id))
+
+            elif result_type == 'status':
+                if ResultsManager.has_result(resource_id):
+                    buf = pickle.dumps('ready')
+                else:
+                    buf = pickle.dumps('not ready')
+
             else:
                 return self.send_error(400, "Unknown resource type")
             f = io.BytesIO(buf)

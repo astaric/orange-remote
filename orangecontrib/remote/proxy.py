@@ -75,6 +75,9 @@ class Proxy:
         execute_on_server("abort",
                           id=self.__id__)
 
+    def ready(self):
+        return fetch_from_server('status/' + self.__id__) == 'ready'
+
     def __getattr__(self, item):
         if item in {"__getnewargs__", "__getstate__", "__setstate__"}:
             raise AttributeError
