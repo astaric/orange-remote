@@ -71,7 +71,7 @@ class RemoteModule:
         self.excluded_modules = exclude
 
         self.descriptions = self.create_descriptions(module)
-        self.modules = self.create_module(self.descriptions)
+        self.modules = self.create_modules()
 
     def create_descriptions(self, module):
         cache = {}
@@ -98,7 +98,8 @@ class RemoteModule:
                 continue
             yield modname
 
-    def create_module(self, proxies):
+    def create_modules(self):
+        proxies = self.descriptions
         proxies_module = types.ModuleType('proxies')
         sys.modules['proxies'] = proxies_module
 
@@ -149,7 +150,7 @@ class RemoteModule:
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        self.modules = self.create_module(self.descriptions)
+        self.modules = self.create_modules()
 
 
 def get_contract(address):
