@@ -22,7 +22,6 @@ class OrangeServer(BaseHTTPRequestHandler):
     def do_GET(self):
         f = None
         try:
-            self.logger.debug("GET " + self.path)
             resource = self.path.strip("/")
             result_type, resource_id = resource.split("/")
 
@@ -58,6 +57,7 @@ class OrangeServer(BaseHTTPRequestHandler):
             shutil.copyfileobj(f, self.wfile)
         except Exception as ex:
             self.logger.exception(ex)
+            return self.send_error(500, "Internal server error")
         finally:
             if f is not None:
                 f.close()
