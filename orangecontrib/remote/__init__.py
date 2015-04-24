@@ -8,7 +8,7 @@ import builtins
 import os
 
 from orangecontrib.remote.command_processor import CommandProcessor
-from orangecontrib.remote.proxy import Proxy, get_server_address, \
+from orangecontrib.remote.proxy import Proxy, \
     wrapped_function, wrapped_member, AnonymousProxy
 from orangecontrib.remote.state_manager import StateManager
 
@@ -26,11 +26,14 @@ class ModuleDescription:
 
 
 class ClassDescription:
+    _proxy = None
+
     def __init__(self, class_):
         self.module = class_.__module__
         self.name = class_.__name__
         self.functions = []
         self.members = []
+
         for n, f in inspect.getmembers(class_, inspect.isfunction):
             if n.startswith("__") and n not in ("__getitem__", "__call__",
                                                 "__len__", "__str__"):
@@ -41,9 +44,8 @@ class ClassDescription:
                 continue
             self.members.append(n)
 
-    @property
-    def member(self):
-        if self._member is None:
+    def create_proxy(self, server):
+        if self._proxy is None or self._proxy.__server__ != server:
             members = {"__module__": "proxies",
                        "__originalclass__": self.name,
                        "__originalmodule__": self.module}
@@ -55,14 +57,13 @@ class ClassDescription:
                 members[n] = wrapped_member(n)
 
             new_name = '%s_%s' % (self.module.replace(".", "_"), self.name)
-            self._member = type(new_name, (Proxy,), members)
-        return self._member
-
-    _member = None
+            self._proxy = type(new_name, (Proxy,), members)
+            self._proxy.__server__ = server
+        return self._proxy
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        state.pop('_member')
+        state.pop('_proxy')
         return state
 
 
@@ -98,7 +99,7 @@ class RemoteModule:
                 continue
             yield modname
 
-    def create_modules(self):
+    def create_modules(self, server=('localhost', 9465)):
         proxies = self.descriptions
         proxies_module = types.ModuleType('proxies')
         sys.modules['proxies'] = proxies_module
@@ -125,7 +126,7 @@ class RemoteModule:
             modules[modname] = current_module
 
             for name, class_ in proxies[modname].members.items():
-                setattr(current_module, name, class_.member)
+                setattr(current_module, name, class_.create_proxy(server))
 
         return modules
 
@@ -137,6 +138,9 @@ class RemoteModule:
             name = '.'.join((parent.__name__, name))
         module.__name__ = name
         return module
+
+    def set_server(self, address):
+        self.modules = self.create_modules(address)
 
     def __import__(self, name):
         if name in self.modules:
@@ -159,7 +163,9 @@ def get_contract(address):
     :return:
     :rtype: RemoteModule
     """
-    return AnonymousProxy(__id__='contract').get()
+    contract = AnonymousProxy(__server__=address, __id__='contract').get()
+    contract.set_server(address)
+    return contract
 
 
 @contextmanager
@@ -167,6 +173,9 @@ def server(address):
     if address is None:
         yield
     else:
+        address = address.split(':')
+        if len(address) > 1:
+            address[1] = int(address[1])
         remote_orange = get_contract(address)
         old_import = builtins.__import__
 

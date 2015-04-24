@@ -29,7 +29,8 @@ class OrangeServer(BaseHTTPRequestHandler):
             if result_type == 'object':
                 try:
                     buf = pickle.dumps(ResultsManager.get_result(resource_id))
-                except KeyError:
+                except KeyError as err:
+                    self.logger.exception(err)
                     return self.send_error(404, "Resource {} not found".format(resource_id))
 
             elif result_type == 'state':

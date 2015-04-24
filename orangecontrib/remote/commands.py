@@ -80,7 +80,7 @@ class Call(Command):
                 setattr(self, attr_name, attr.get())
             elif isinstance(attr, list):
                 for i, value in enumerate(attr):
-                    if isinstance(attr, Promise):
+                    if isinstance(value, Promise):
                         attr[i] = value.get()
 
 
