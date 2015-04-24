@@ -3,7 +3,6 @@ from http.client import HTTPConnection
 import inspect
 import json
 import pickle
-import os
 import urllib.request
 import Orange
 

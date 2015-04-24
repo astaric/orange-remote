@@ -5,7 +5,7 @@ import signal
 
 import Orange
 
-from orangecontrib.remote import RemoteModule
+from orangecontrib.remote.remote_module import RemoteModule
 
 from orangecontrib.remote.command_processor import CommandProcessor
 from orangecontrib.remote.http_server import OrangeServer
