@@ -16,16 +16,17 @@ logger = logging.getLogger("orange_server")
 
 
 def run_server():
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-        datefmt='%m-%d %H:%M:%S')
-
     from optparse import OptionParser
     parser = OptionParser()
     parser.add_option("-p", "--port", dest="port", default="9465", help="Port number")
     parser.add_option("--host", dest="hostname", default="", help="Host name")
+    parser.add_option("-l", "--log-level", dest="log_level", default="ERROR", help="Log level")
     options, args = parser.parse_args()
+
+    logging.basicConfig(
+        level=options.log_level,
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        datefmt='%m-%d %H:%M:%S')
 
     port = int(options.port)
     hostname = options.hostname
