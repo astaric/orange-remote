@@ -35,6 +35,13 @@ class ClassDescription:
                                                 "__len__", "__str__"):
                 continue
             self.functions.append(FunctionDescription(n, class_))
+
+        for n, f in inspect.getmembers(class_, inspect.ismethod):
+            if n.startswith("__") and n not in ("__getitem__", "__call__",
+                                                "__len__", "__str__"):
+                continue
+            self.functions.append(ClassMethodDescription(n, class_))
+
         for n, p in inspect.getmembers(class_, inspect.isdatadescriptor):
             if n.startswith("__"):
                 continue
@@ -89,6 +96,29 @@ class FunctionDescription:
                 result = AnonymousProxy(__id__=__id__)
                 result.__server__ = self.__server__
                 return result
+        function.__doc__ = self.doc
+
+        return function
+
+
+class ClassMethodDescription(FunctionDescription):
+    def __init__(self, name, cls):
+        super().__init__(name, cls)
+        self.module = cls.__module__
+        self.cls = cls.__name__
+
+    def create_proxy(self, server):
+        def function(*args, **kwargs):
+            __id__ = execute_on_server(
+                server,
+                "create",
+                module=self.module,
+                class_=self.cls + '.' + self.name,
+                args=args, kwargs=kwargs)
+
+            result = AnonymousProxy(__id__=__id__)
+            result.__server__ = server
+            return result
         function.__doc__ = self.doc
 
         return function

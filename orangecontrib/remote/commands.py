@@ -44,8 +44,9 @@ class Create(Command):
     kwargs = {}
 
     def execute(self):
-        module = importlib.import_module(self.module)
-        cls = getattr(module, self.class_)
+        cls = importlib.import_module(self.module)
+        for name in self.class_.split("."):
+            cls = getattr(cls, name)
         return cls(*self.args, **self.kwargs)
 
     def __str__(self):
