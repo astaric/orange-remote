@@ -16,7 +16,7 @@ def wrapped_member(member_name):
         __id__ = execute_on_server(self.__server__, "call/%s.%s" % (self.__id__[:8], '__getattribute__'),
                                    object=self, method='__getattribute__', args=[str(member_name)])
         result = AnonymousProxy(__id__=__id__)
-        result.__server__ = self.server
+        result.__server__ = self.__server__
         return result
 
     return property(function)
@@ -26,14 +26,15 @@ def wrapped_function(function_name, synchronous=False):
     def function(self, *args, **kwargs):
         if function_name == "__init__":
             return
-        __id__ = execute_on_server(self.server, "call/%s.%s(%s%s)" % (self.__id__, str(function_name),
-                                                                      ",".join(map(str, args)), ""),
-                                   object=self, method=str(function_name), args=args, kwargs=kwargs)
+        __id__ = execute_on_server(
+            self.__server__,
+            "call/%s.%s(%s%s)" % (self.__id__, str(function_name), ",".join(map(str, args)), ""),
+            object=self, method=str(function_name), args=args, kwargs=kwargs)
         if synchronous:
-            return fetch_from_server(self.server, 'object/' + __id__)
+            return fetch_from_server(self.__server__, 'object/' + __id__)
         else:
             result = AnonymousProxy(__id__=__id__)
-            result.__server__ = self.server
+            result.__server__ = self.__server__
             return result
 
     return function
