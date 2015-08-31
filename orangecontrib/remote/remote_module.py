@@ -4,7 +4,7 @@ import pkgutil
 import sys
 import types
 from orangecontrib.remote import wrapped_function, wrapped_member, Proxy
-from orangecontrib.remote.proxy import fetch_from_server
+from orangecontrib.remote.proxy import fetch_from_server, AnonymousProxy, execute_on_server
 
 
 class ModuleDescription:
@@ -25,6 +25,8 @@ class ClassDescription:
     def __init__(self, class_):
         self.module = class_.__module__
         self.name = class_.__name__
+        self.doc = class_.__doc__
+        self.init_doc = class_.__init__.__doc__
         self.functions = []
         self.members = []
 
@@ -32,7 +34,7 @@ class ClassDescription:
             if n.startswith("__") and n not in ("__getitem__", "__call__",
                                                 "__len__", "__str__"):
                 continue
-            self.functions.append(n)
+            self.functions.append(FunctionDescription(n, class_))
         for n, p in inspect.getmembers(class_, inspect.isdatadescriptor):
             if n.startswith("__"):
                 continue
@@ -43,9 +45,8 @@ class ClassDescription:
             members = {"__module__": "proxies",
                        "__originalclass__": self.name,
                        "__originalmodule__": self.module}
-            for n in self.functions:
-                synchronous = n in ("__len__", "__str__")
-                members[n] = wrapped_function(n, synchronous)
+            for f in self.functions:
+                members[f.name] = f.create_proxy(server)
 
             for n in self.members:
                 members[n] = wrapped_member(n)
@@ -53,12 +54,44 @@ class ClassDescription:
             new_name = '%s_%s' % (self.module.replace(".", "_"), self.name)
             self._proxy = type(new_name, (Proxy,), members)
             self._proxy.__server__ = server
+            self._proxy.__doc__ = self.doc
+            self._proxy.__init__ = lambda self, *args, **kwargs: None
+            self._proxy.__init__.__doc__ = self.init_doc
         return self._proxy
 
     def __getstate__(self):
         state = self.__dict__.copy()
         state.pop('_proxy')
         return state
+
+
+class FunctionDescription:
+    def __init__(self, name, class_=None):
+        self.name = name
+        if class_ != None and hasattr(class_, name):
+            doc = getattr(class_, name).__doc__
+            self.doc = doc
+
+    def create_proxy(self, server):
+        name = self.name
+        synchronous = self.name in ("__len__", "__str__")
+
+        def function(self, *args, **kwargs):
+            if self.name == "__init__":
+                return
+            __id__ = execute_on_server(
+                self.__server__,
+                "call/%s.%s(%s%s)" % (self.__id__, str(name), ",".join(map(str, args)), ""),
+                object=self, method=str(name), args=args, kwargs=kwargs)
+            if synchronous:
+                return fetch_from_server(self.__server__, 'object/' + __id__)
+            else:
+                result = AnonymousProxy(__id__=__id__)
+                result.__server__ = self.__server__
+                return result
+        function.__doc__ = self.doc
+
+        return function
 
 
 class RemoteModule:
