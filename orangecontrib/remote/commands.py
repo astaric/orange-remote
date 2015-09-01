@@ -133,6 +133,11 @@ class ExecutionFailed:
     def raise_(self):
         raise(RemoteException(self.message))
 
+    def __str__(self):
+        return 'Execution Failed: ' + self.message
+
+    __repr__ = __str__
+
 
 class RemoteException(Exception):
     pass

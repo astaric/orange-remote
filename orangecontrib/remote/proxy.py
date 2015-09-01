@@ -86,6 +86,9 @@ class Proxy:
     def ready(self):
         return fetch_from_server(self.__server__, 'status/' + self.__id__) == 'ready'
 
+    def __str__(self):
+        return wrapped_function("__str__", True)(self)
+
     def __getattr__(self, item):
         if item in {"__getnewargs__", "__getstate__", "__setstate__"}:
             raise AttributeError
