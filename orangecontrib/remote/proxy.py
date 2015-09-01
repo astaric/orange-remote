@@ -68,7 +68,7 @@ class Proxy:
         else:
             self.__id__ = execute_on_server(
                 cls.__server__,
-                "create",
+                "create/%s.%s" % (cls.__originalmodule__, cls.__originalclass__),
                 module=cls.__originalmodule__, class_=cls.__originalclass__,
                 args=args, kwargs=kwargs)
         return self
