@@ -1,14 +1,11 @@
 from orangecontrib import remote
 with remote.server('127.0.0.1:9465'):
     import Orange
-    from Orange.classification.logistic_regression import LogisticRegressionLearner
+    from Orange.classification import LogisticRegressionLearner
+    from Orange.evaluation import CrossValidation, AUC, CA
 
 iris = Orange.data.Table('iris')
-print(repr(iris))
-print(iris[1])
+logreg = LogisticRegressionLearner()
 
-logreg = LogisticRegressionLearner()(iris)
-print(logreg(iris[1]))
-
-iris2 = iris.get()
-print(repr(iris2))
+results = CrossValidation(iris, [logreg])
+print(AUC(results), CA(results))

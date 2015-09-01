@@ -1,9 +1,9 @@
 import Orange
-from Orange.classification.logistic_regression import LogisticRegressionLearner
+from Orange.classification import LogisticRegressionLearner
+from Orange.evaluation import CrossValidation, AUC, CA
 
 iris = Orange.data.Table('iris')
-print(iris)
-print(iris[1])
+logreg = LogisticRegressionLearner()
 
-logreg = LogisticRegressionLearner()(iris)
-print(logreg(iris[1]))
+results = CrossValidation(iris, [logreg])
+print(AUC(results), CA(results))
