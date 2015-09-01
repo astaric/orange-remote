@@ -33,8 +33,19 @@ class Command:
     def execute(self):
         raise NotImplementedError()
 
-    def resolve_promises(self):
-        pass
+    def resolve_promises(self, *attrs):
+
+        def resolve_promises(obj):
+            if isinstance(obj, Promise):
+                obj = obj.get()
+            elif isinstance(obj, list):
+                for i, value in enumerate(obj):
+                    obj[i] = resolve_promises(obj[i])
+            return obj
+
+        for attr_name in attrs:
+            value = resolve_promises(getattr(self, attr_name))
+            setattr(self, attr_name, value)
 
 
 class Create(Command):
@@ -56,6 +67,9 @@ class Create(Command):
             self.module, self.class_, ", ".join(args)
         )
 
+    def resolve_promises(self, *attrs):
+        super().resolve_promises("args", "kwargs")
+
 
 class Call(Command):
     object = ""
@@ -64,7 +78,6 @@ class Call(Command):
     kwargs = {}
 
     def execute(self):
-        self.resolve_promises("object", "args", "kwargs")
         return getattr(self.object, self.method)(*self.args, **self.kwargs)
 
     def __str__(self):
@@ -74,15 +87,8 @@ class Call(Command):
             repr(self.object), self.method, ", ".join(map(repr, args))
         )
 
-    def resolve_promises(self, *args):
-        for attr_name in ("object", "args"):
-            attr = getattr(self, attr_name)
-            if isinstance(attr, Promise):
-                setattr(self, attr_name, attr.get())
-            elif isinstance(attr, list):
-                for i, value in enumerate(attr):
-                    if isinstance(value, Promise):
-                        attr[i] = value.get()
+    def resolve_promises(self, *attrs):
+        super().resolve_promises("object", "args", "kwargs")
 
 
 class Get(Command):
