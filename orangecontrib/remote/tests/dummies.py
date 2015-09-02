@@ -7,6 +7,13 @@ class DummyClass:
     def __str__(self):
         return "test"
 
+    def annotated_method(self) -> str:
+        pass
+
+    @classmethod
+    def annotated_class_method(cls) -> str:
+        pass
+
 
 class DummyIterable:
     members = ["a"]

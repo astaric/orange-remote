@@ -15,14 +15,19 @@ class ModuleDescription:
             if not cls.__module__.startswith("Orange"):
                 continue
 
-            self.members[name] = known_classes.setdefault(
-                cls, ClassDescription(cls))
+            self.members[name] = known_classes.get(
+                cls, ClassDescription(cls, known_classes))
 
 
 class ClassDescription:
     _proxy = None
 
-    def __init__(self, cls):
+    def __init__(self, cls, known_types=None):
+        if known_types is None:
+            known_types = {}
+        if cls not in known_types:
+            known_types[cls] = self
+
         self.module = cls.__module__
         self.name = cls.__name__
         self.doc = cls.__doc__
@@ -34,13 +39,13 @@ class ClassDescription:
             if n.startswith("__") and n not in ("__getitem__", "__call__",
                                                 "__len__", "__str__"):
                 continue
-            self.functions.append(FunctionDescription(n, getattr(cls, n)))
+            self.functions.append(FunctionDescription(n, getattr(cls, n), known_types))
 
         for n, f in inspect.getmembers(cls, inspect.ismethod):
             if n.startswith("__") and n not in ("__getitem__", "__call__",
                                                 "__len__", "__str__"):
                 continue
-            self.functions.append(ClassMethodDescription(n, cls))
+            self.functions.append(ClassMethodDescription(n, cls, known_types))
 
         for n, p in inspect.getmembers(cls, inspect.isdatadescriptor):
             if n.startswith("__"):
@@ -71,15 +76,22 @@ class ClassDescription:
         state.pop('_proxy')
         return state
 
+    def __repr__(self):
+        return "ClassDescription: '%s'" % self.name
+
 
 class FunctionDescription:
     name = None
     doc = None
+    _return_type = None
 
-    def __init__(self, name, f):
+    def __init__(self, name, f, known_types=()):
         self.name = name
         doc = f.__doc__
         self.doc = doc
+        return_type = f.__annotations__.get('return')
+        if return_type in known_types:
+            self.return_type = known_types[return_type]
 
     def create_proxy(self, server):
         name = self.name
@@ -101,14 +113,21 @@ class FunctionDescription:
         return function
 
     def create_result(self, server, __id__):
-        result = AnonymousProxy(__id__=__id__)
-        result.__server__ = server
+        if self.return_type:
+            return_type = self.return_type.create_proxy(server)
+            result = return_type(__id__=__id__)
+        else:
+            result = AnonymousProxy(__id__=__id__)
+            result.__server__ = server
         return result
+
+    def __repr__(self):
+        return "FunctionDescription: '%s'" % self.name
 
 
 class ClassMethodDescription(FunctionDescription):
-    def __init__(self, name, cls):
-        super().__init__(name, getattr(cls, name))
+    def __init__(self, name, cls, known_types=()):
+        super().__init__(name, getattr(cls, name), known_types)
         self.module = cls.__module__
         self.cls = cls.__name__
 
@@ -125,6 +144,9 @@ class ClassMethodDescription(FunctionDescription):
         function.__doc__ = self.doc
 
         return function
+
+    def __repr__(self):
+        return "ClassMethodDescription: '%s'" % self.name
 
 
 class RemoteModule:

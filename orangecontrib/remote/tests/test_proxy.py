@@ -76,6 +76,19 @@ class OrangeServerTests(unittest.TestCase):
 
         self.assertRaises(RemoteException, proxy_instance.get)
 
+    def test_annotated_methods_return_proxies(self):
+        proxy_cache = {}
+        s = ClassDescription(str, proxy_cache)
+        sp = s.create_proxy(self.server.server_address)
+        d = ClassDescription(DummyClass, proxy_cache)
+        dp = d.create_proxy(self.server.server_address)
+
+        # method
+        self.assertIsInstance(dp().annotated_method(), sp)
+
+        # class method
+        self.assertIsInstance(dp.annotated_class_method(), sp)
+
 
 if __name__ == '__main__':
     unittest.main()
