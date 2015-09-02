@@ -1,16 +1,13 @@
-import logging
-import os
 from socketserver import TCPServer
 import threading
 import unittest
+from orangecontrib.remote.remote_module import ClassDescription
 
 from orangecontrib.remote import Proxy
 from orangecontrib.remote.command_processor import CommandProcessor
+from orangecontrib.remote.commands import RemoteException
 from orangecontrib.remote.http_server import OrangeServer
-from orangecontrib.remote.proxy import create_proxy
 from orangecontrib.remote.tests.dummies import DummyIterable, DummyClass
-import orangecontrib.remote.__main__ as orange_server
-from orangecontrib.remote.commands import ExecutionFailedError
 
 
 class OrangeServerTests(unittest.TestCase):
@@ -42,8 +39,10 @@ class OrangeServerTests(unittest.TestCase):
         cls.server.server_close()
 
     def setUp(self):
-        os.environ["ORANGE_SERVER"] = ':'.join(map(str, self.server.server_address))
-        self.proxy = create_proxy("DummyClass", DummyClass)
+        self.proxy = self.create_proxy(DummyClass)
+
+    def create_proxy(self, cls):
+        return ClassDescription(cls).create_proxy(self.server.server_address)
 
     def test_can_instantiate_proxy(self):
         self.proxy()
@@ -59,9 +58,7 @@ class OrangeServerTests(unittest.TestCase):
         self.assertIsInstance(proxy_instance.b, Proxy)
 
     def test_can_proxy_iterable(self):
-        FORMAT = '%(asctime)-15s %(clientip)s %(user)-8s %(message)s'
-        logging.basicConfig(format=FORMAT)
-        proxy = create_proxy("DummyIterable", DummyIterable)
+        proxy = self.create_proxy(DummyIterable)
 
         proxy_instance = proxy(["a"])
 
@@ -73,11 +70,11 @@ class OrangeServerTests(unittest.TestCase):
             self.assertEqual("a", x.get())
 
     def test_raises_exception_when_remote_execution_fails(self):
-        proxy = create_proxy("int", int)
+        proxy = self.create_proxy(int)
 
         proxy_instance = proxy("a")
 
-        self.assertRaises(ExecutionFailedError, proxy_instance.get)
+        self.assertRaises(RemoteException, proxy_instance.get)
 
 
 if __name__ == '__main__':

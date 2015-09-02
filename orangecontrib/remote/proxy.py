@@ -1,6 +1,5 @@
 import base64
 from http.client import HTTPConnection
-import inspect
 import json
 import pickle
 import urllib.request
@@ -143,26 +142,3 @@ def execute_on_server(server, uri, **params):
         return response_data.decode('utf-8')
 
 new_to_old = {}
-
-
-def create_proxy(name, class_):
-    members = {"__module__": "proxies",
-               "__originalclass__": class_.__name__,
-               "__originalmodule__": class_.__module__}
-    for n, f in inspect.getmembers(class_, inspect.isfunction):
-        synchronous = False
-        if n in ("__len__", "__str__"):
-            synchronous = True
-        elif n.startswith("__") and n not in ("__getitem__", "__call__"):
-            continue
-        members[n] = wrapped_function(n, synchronous)
-
-    for n, p in inspect.getmembers(class_, inspect.isdatadescriptor):
-        if n.startswith("__"):
-            continue
-        members[n] = wrapped_member(n)
-
-    new_name = '%s_%s' % (class_.__module__.replace(".", "_"), name)
-    new_class = type(new_name, (Proxy,), members)
-    new_to_old[new_class] = class_
-    return new_class
