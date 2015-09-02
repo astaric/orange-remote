@@ -11,38 +11,38 @@ class ModuleDescription:
     def __init__(self, module, known_classes):
         self.members = {}
 
-        for name, class_ in inspect.getmembers(module, inspect.isclass):
-            if not class_.__module__.startswith("Orange"):
+        for name, cls in inspect.getmembers(module, inspect.isclass):
+            if not cls.__module__.startswith("Orange"):
                 continue
 
             self.members[name] = known_classes.setdefault(
-                class_, ClassDescription(class_))
+                cls, ClassDescription(cls))
 
 
 class ClassDescription:
     _proxy = None
 
-    def __init__(self, class_):
-        self.module = class_.__module__
-        self.name = class_.__name__
-        self.doc = class_.__doc__
-        self.init_doc = class_.__init__.__doc__
+    def __init__(self, cls):
+        self.module = cls.__module__
+        self.name = cls.__name__
+        self.doc = cls.__doc__
+        self.init_doc = cls.__init__.__doc__
         self.functions = []
         self.members = []
 
-        for n, f in inspect.getmembers(class_, inspect.isfunction):
+        for n, f in inspect.getmembers(cls, inspect.isfunction):
             if n.startswith("__") and n not in ("__getitem__", "__call__",
                                                 "__len__", "__str__"):
                 continue
-            self.functions.append(FunctionDescription(n, class_))
+            self.functions.append(FunctionDescription(n, getattr(cls, n)))
 
-        for n, f in inspect.getmembers(class_, inspect.ismethod):
+        for n, f in inspect.getmembers(cls, inspect.ismethod):
             if n.startswith("__") and n not in ("__getitem__", "__call__",
                                                 "__len__", "__str__"):
                 continue
-            self.functions.append(ClassMethodDescription(n, class_))
+            self.functions.append(ClassMethodDescription(n, cls))
 
-        for n, p in inspect.getmembers(class_, inspect.isdatadescriptor):
+        for n, p in inspect.getmembers(cls, inspect.isdatadescriptor):
             if n.startswith("__"):
                 continue
             self.members.append(n)
@@ -73,37 +73,42 @@ class ClassDescription:
 
 
 class FunctionDescription:
-    def __init__(self, name, class_=None):
+    name = None
+    doc = None
+
+    def __init__(self, name, f):
         self.name = name
-        if class_ != None and hasattr(class_, name):
-            doc = getattr(class_, name).__doc__
-            self.doc = doc
+        doc = f.__doc__
+        self.doc = doc
 
     def create_proxy(self, server):
         name = self.name
         synchronous = self.name in ("__len__", "__str__")
 
-        def function(self, *args, **kwargs):
-            if self.name == "__init__":
+        def function(this, *args, **kwargs):
+            if this.name == "__init__":
                 return
             __id__ = execute_on_server(
-                self.__server__,
-                "call/%s.%s(%s%s)" % (self.__id__, str(name), ",".join(map(str, args)), ""),
-                object=self, method=str(name), args=args, kwargs=kwargs)
+                this.__server__,
+                "call/%s.%s(%s%s)" % (this.__id__, str(name), ",".join(map(str, args)), ""),
+                object=this, method=str(name), args=args, kwargs=kwargs)
             if synchronous:
-                return fetch_from_server(self.__server__, 'object/' + __id__)
+                return fetch_from_server(this.__server__, 'object/' + __id__)
             else:
-                result = AnonymousProxy(__id__=__id__)
-                result.__server__ = self.__server__
-                return result
+                return self.create_result(server, id)
         function.__doc__ = self.doc
 
         return function
 
+    def create_result(self, server, __id__):
+        result = AnonymousProxy(__id__=__id__)
+        result.__server__ = server
+        return result
+
 
 class ClassMethodDescription(FunctionDescription):
     def __init__(self, name, cls):
-        super().__init__(name, cls)
+        super().__init__(name, getattr(cls, name))
         self.module = cls.__module__
         self.cls = cls.__name__
 
@@ -116,9 +121,7 @@ class ClassMethodDescription(FunctionDescription):
                 class_=self.cls + '.' + self.name,
                 args=args, kwargs=kwargs)
 
-            result = AnonymousProxy(__id__=__id__)
-            result.__server__ = server
-            return result
+            return self.create_result(server, __id__)
         function.__doc__ = self.doc
 
         return function
