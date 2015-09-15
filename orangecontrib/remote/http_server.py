@@ -6,7 +6,6 @@ import logging
 import pickle
 import shutil
 import uuid
-from orangecontrib.remote.command_processor import CommandProcessor
 from orangecontrib.remote.commands import Command, Create, Call, Get, Promise, \
     Abort
 from orangecontrib.remote.results_manager import ResultsManager
@@ -16,8 +15,14 @@ from orangecontrib.remote.state_manager import StateManager
 class OrangeServer(BaseHTTPRequestHandler):
     logger = logging.getLogger("http")
 
-    def __init__(self, request, client_address, server):
-        super(OrangeServer, self).__init__(request, client_address, server)
+    def __init__(self, request, client_address, server,
+                 executor):
+        self.executor = executor
+        super().__init__(request, client_address, server)
+
+    @classmethod
+    def inject(cls, executor):
+        return lambda *args: cls(*args, executor=executor)
 
     def do_GET(self):
         f = None
@@ -68,7 +73,7 @@ class OrangeServer(BaseHTTPRequestHandler):
             data = self.parse_post_data()
             if isinstance(data, Command):
                 ResultsManager.register_result(result_id)
-                CommandProcessor.queue((result_id, data))
+                self.executor.queue((result_id, data))
             else:
                 ResultsManager.set_result(result_id, data)
         except Exception as err:

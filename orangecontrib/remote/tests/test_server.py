@@ -5,30 +5,31 @@ from socketserver import TCPServer
 import threading
 import unittest
 
-from orangecontrib.remote import CommandProcessor
 from orangecontrib.remote.commands import ExecutionFailed
 from orangecontrib.remote.http_server import OrangeServer
 from orangecontrib.remote.results_manager import ResultsManager
+from orangecontrib.remote.executors.multiprocessing import MultiprocessingExecutor
+
 
 class OrangeServerTests(unittest.TestCase):
     server = server_thread = None
 
     @classmethod
     def setUpClass(cls):
-        cls.server = TCPServer(('localhost', 0), OrangeServer)
+        cls.worker = MultiprocessingExecutor()
+        cls.worker_thread = threading.Thread(
+            name='Processing queue',
+            target=cls.worker.run,
+            kwargs={'poll_interval': 1}
+        )
+        cls.server = TCPServer(('localhost', 0),
+                               OrangeServer.inject(cls.worker))
         cls.server_thread = threading.Thread(
             name='Orange server serving',
             target=cls.server.serve_forever,
             kwargs={'poll_interval': 0.01}
         )
         cls.server_thread.start()
-
-        cls.worker = CommandProcessor()
-        cls.worker_thread = threading.Thread(
-            name='Processing queue',
-            target=cls.worker.run,
-            kwargs={'poll_interval': 1}
-        )
         cls.worker_thread.start()
 
     @classmethod

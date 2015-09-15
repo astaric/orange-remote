@@ -2,7 +2,6 @@ from contextlib import contextmanager
 import builtins
 import os
 
-from orangecontrib.remote.command_processor import CommandProcessor
 from orangecontrib.remote.proxy import Proxy, \
     wrapped_function, wrapped_member, AnonymousProxy
 from orangecontrib.remote.remote_module import ModuleDescription, RemoteModule

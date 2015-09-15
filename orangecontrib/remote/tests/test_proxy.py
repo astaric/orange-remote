@@ -4,10 +4,10 @@ import unittest
 from orangecontrib.remote.remote_module import ClassDescription
 
 from orangecontrib.remote import Proxy
-from orangecontrib.remote.command_processor import CommandProcessor
 from orangecontrib.remote.commands import RemoteException
 from orangecontrib.remote.http_server import OrangeServer
 from orangecontrib.remote.tests.dummies import DummyIterable, DummyClass
+from orangecontrib.remote.executors.multiprocessing import MultiprocessingExecutor
 
 
 class OrangeServerTests(unittest.TestCase):
@@ -15,19 +15,20 @@ class OrangeServerTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.server = TCPServer(('localhost', 0), OrangeServer)
+        cls.worker = MultiprocessingExecutor()
+        handler = OrangeServer.inject(cls.worker)
+        cls.server = TCPServer(('localhost', 0), handler)
         cls.server_thread = threading.Thread(
             name='Orange server serving',
             target=cls.server.serve_forever,
             kwargs={'poll_interval': 0.01}
         )
-        cls.server_thread.start()
-        cls.worker = CommandProcessor()
         cls.worker_thread = threading.Thread(
             name='Processing thread',
             target=cls.worker.run,
             kwargs={'poll_interval': 0.01}
         )
+        cls.server_thread.start()
         cls.worker_thread.start()
 
     @classmethod

@@ -7,7 +7,7 @@ from orangecontrib.remote.results_manager import ResultsManager
 from orangecontrib.remote.state_manager import StateManager
 
 
-class CommandProcessor:
+class MultiprocessingExecutor:
     logger = logging.getLogger("worker")
     aborted_commands_path = \
         os.path.join(os.path.dirname(__file__), 'aborted_commands')
@@ -44,7 +44,7 @@ class CommandProcessor:
         execution_pool.terminate()
         self.logger.debug("Joining execution pool")
         execution_pool.join()
-        self.logger.info("Worker is no more")
+        self.logger.info("Worker terminated")
 
     def on_completed(self, result):
         id, result = result

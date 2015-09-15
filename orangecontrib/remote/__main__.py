@@ -7,9 +7,9 @@ import Orange
 
 from orangecontrib.remote.remote_module import RemoteModule
 
-from orangecontrib.remote.command_processor import CommandProcessor
 from orangecontrib.remote.http_server import OrangeServer
 from orangecontrib.remote.results_manager import ResultsManager
+from orangecontrib.remote.executors.multiprocessing import MultiprocessingExecutor
 
 
 logger = logging.getLogger("orange_server")
@@ -31,14 +31,15 @@ def run_server():
     port = int(options.port)
     hostname = options.hostname
 
-    httpd = socketserver.TCPServer((hostname, port), OrangeServer)
-    worker = CommandProcessor()
+    worker = MultiprocessingExecutor()
     worker_thread = threading.Thread(
         name='Processing queue',
         target=worker.run,
         kwargs={'poll_interval': 1}
     )
-    server_thread = threading.Thread(
+    httpd = socketserver.TCPServer((hostname, port),
+                                   OrangeServer.inject(worker))
+    httpd_thread = threading.Thread(
         name='HTTP Server',
         target=httpd.serve_forever,
         kwargs={'poll_interval': 1}
@@ -50,7 +51,7 @@ def run_server():
         logging.info("Received a shutdown request")
         worker.shutdown()
         httpd.shutdown()
-        server_thread.join()
+        httpd_thread.join()
         worker_thread.join()
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
@@ -58,7 +59,7 @@ def run_server():
     ResultsManager.set_result('contract', RemoteModule(
         Orange, exclude=["Orange.test", "Orange.canvas", "Orange.widgets"]))
 
-    server_thread.start()
+    httpd_thread.start()
     worker_thread.start()
 
     print("Starting Orange Server")
