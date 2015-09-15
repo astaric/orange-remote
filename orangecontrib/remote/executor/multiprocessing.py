@@ -4,7 +4,7 @@ import os
 from orangecontrib.remote.results_manager import ResultsManager
 from orangecontrib.remote.state_manager import StateManager
 from orangecontrib.remote.commands import ExecutionFailed
-from orangecontrib.remote.executors import Executor
+from orangecontrib.remote.executor import Executor
 
 
 class MultiprocessingExecutor(Executor):

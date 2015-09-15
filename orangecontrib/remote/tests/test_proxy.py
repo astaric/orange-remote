@@ -7,7 +7,7 @@ from orangecontrib.remote import Proxy
 from orangecontrib.remote.commands import RemoteException
 from orangecontrib.remote.http_server import OrangeServer
 from orangecontrib.remote.tests.dummies import DummyIterable, DummyClass
-from orangecontrib.remote.executors.multiprocessing import MultiprocessingExecutor
+from orangecontrib.remote.executor.multiprocessing import MultiprocessingExecutor
 
 
 class ProxyTests(unittest.TestCase):

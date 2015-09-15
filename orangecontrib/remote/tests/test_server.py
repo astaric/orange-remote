@@ -8,7 +8,7 @@ import unittest
 from orangecontrib.remote.commands import ExecutionFailed
 from orangecontrib.remote.http_server import OrangeServer
 from orangecontrib.remote.results_manager import ResultsManager
-from orangecontrib.remote.executors.multiprocessing import MultiprocessingExecutor
+from orangecontrib.remote.executor.multiprocessing import MultiprocessingExecutor
 
 
 class OrangeServerTests(unittest.TestCase):

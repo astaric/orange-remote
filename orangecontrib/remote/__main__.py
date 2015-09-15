@@ -9,7 +9,6 @@ from orangecontrib.remote.remote_module import RemoteModule
 
 from orangecontrib.remote.http_server import OrangeServer
 from orangecontrib.remote.results_manager import ResultsManager
-from orangecontrib.remote.executors.multiprocessing import MultiprocessingExecutor
 
 
 logger = logging.getLogger("orange_server")
@@ -20,6 +19,9 @@ def run_server():
     parser = OptionParser()
     parser.add_option("-p", "--port", dest="port", default="9465", help="Port number")
     parser.add_option("--host", dest="hostname", default="", help="Host name")
+    parser.add_option("--executor", dest="executor",
+                      default="orangecontrib.remote.executor.multiprocessing.MultiprocessingExecutor",
+                      help="Class for executing received commands.")
     parser.add_option("-l", "--log-level", dest="log_level", default="ERROR", help="Log level")
     options, args = parser.parse_args()
 
@@ -31,14 +33,15 @@ def run_server():
     port = int(options.port)
     hostname = options.hostname
 
-    worker = MultiprocessingExecutor()
-    worker_thread = threading.Thread(
+    ExecutorCls = import_class(options.executor)
+    executor = ExecutorCls()
+    executor_thread = threading.Thread(
         name='Processing queue',
-        target=worker.run,
+        target=executor.run,
         kwargs={'poll_interval': 1}
     )
     httpd = socketserver.TCPServer((hostname, port),
-                                   OrangeServer.inject(worker))
+                                   OrangeServer.inject(executor))
     httpd_thread = threading.Thread(
         name='HTTP Server',
         target=httpd.serve_forever,
@@ -49,10 +52,10 @@ def run_server():
         if threading.current_thread().name != 'MainThread':
             return
         logging.info("Received a shutdown request")
-        worker.shutdown()
+        executor.shutdown()
         httpd.shutdown()
         httpd_thread.join()
-        worker_thread.join()
+        executor_thread.join()
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
 
@@ -60,11 +63,16 @@ def run_server():
         Orange, exclude=["Orange.test", "Orange.canvas", "Orange.widgets"]))
 
     httpd_thread.start()
-    worker_thread.start()
+    executor_thread.start()
 
     print("Starting Orange Server")
     print("Listening on port", port)
 
+
+def import_class(cl):
+    module, classname = cl.rsplit('.', 1)
+    m = __import__(module, globals(), locals(), [classname])
+    return getattr(m, classname)
 
 if __name__ == "__main__":
     run_server()
