@@ -3,7 +3,7 @@ import inspect
 import pkgutil
 import sys
 import types
-from orangecontrib.remote import wrapped_function, wrapped_member, Proxy
+from orangecontrib.remote import wrapped_member, Proxy
 from orangecontrib.remote.proxy import fetch_from_server, AnonymousProxy, execute_on_server
 
 
@@ -83,7 +83,7 @@ class ClassDescription:
 class FunctionDescription:
     name = None
     doc = None
-    _return_type = None
+    return_type = None
 
     def __init__(self, name, f, known_types=()):
         self.name = name
@@ -107,7 +107,7 @@ class FunctionDescription:
             if synchronous:
                 return fetch_from_server(this.__server__, 'object/' + __id__)
             else:
-                return self.create_result(server, id)
+                return self.create_result(server, __id__)
         function.__doc__ = self.doc
 
         return function
