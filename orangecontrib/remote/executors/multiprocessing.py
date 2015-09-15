@@ -1,79 +1,66 @@
 import logging
 import multiprocessing
 import os
-import queue
-from orangecontrib.remote.commands import execute_command, Abort
 from orangecontrib.remote.results_manager import ResultsManager
 from orangecontrib.remote.state_manager import StateManager
+from orangecontrib.remote.commands import ExecutionFailed
+from orangecontrib.remote.executors import Executor
 
 
-class MultiprocessingExecutor:
-    logger = logging.getLogger("worker")
+class MultiprocessingExecutor(Executor):
     aborted_commands_path = \
         os.path.join(os.path.dirname(__file__), 'aborted_commands')
     if not os.path.exists(aborted_commands_path):
         os.mkdir(aborted_commands_path)
 
-    _execution_queue = queue.Queue()
-
     def __init__(self):
-        self._is_running = True
+        super().__init__()
         self.executing_commands = set()
+        self.execution_pool = None
 
-    def run(self, poll_interval=1):
-        self.logger.info("Worker started")
-        execution_pool = multiprocessing.Pool()
+    def _on_start(self):
+        self.execution_pool = multiprocessing.Pool()
 
-        while self._is_running:
-            try:
-                result_id, command = self._execution_queue.get(block=True, timeout=poll_interval)
-                self.logger.info("Received command " + result_id)
-
-                if isinstance(command, Abort):
-                    self.abort_command(command.id)
-                else:
-                    command.resolve_promises()
-                    self.logger.debug("Queueing %s for execution" % result_id)
-                    self.set_executing(result_id)
-                    execution_pool.apply_async(execute_command, [result_id, command], callback=self.on_completed)
-
-            except queue.Empty:
-                continue
-
+    def _on_stop(self):
         self.logger.debug("Terminating execution pool")
-        execution_pool.terminate()
+        self.execution_pool.terminate()
         self.logger.debug("Joining execution pool")
-        execution_pool.join()
-        self.logger.info("Worker terminated")
+        self.execution_pool.join()
 
-    def on_completed(self, result):
-        id, result = result
-        self.logger.debug("Received result: " + id)
-        ResultsManager.set_result(id, result)
-        StateManager.delete_state(id)
-        self.set_done(id)
-
-    def set_executing(self, id):
-        self.executing_commands.add(id)
-
-    def set_done(self, id):
-        self.executing_commands.remove(id)
-        abort_path = os.path.join(self.aborted_commands_path, id)
-        if os.path.exists(abort_path):
-            os.remove(abort_path)
-
-    def abort_command(self, id):
+    def _abort_command(self, command):
         with open(os.path.join(self.aborted_commands_path, id), 'w'):
             pass
 
-    @classmethod
-    def queue(cls, command):
-        cls._execution_queue.put(command)
+    def _execute_command(self, command, result_id):
+        self.executing_commands.add(id)
 
-    def shutdown(self):
-        self.logger.info("Received a shutdown request")
-        if self.executing_commands:
-            self.logger.debug("Active tasks: " + str(self.executing_commands))
-            for command in self.executing_commands:
-                self.abort_command(command)
-        self._is_running = False
+        def on_completed(result):
+            id, result = result
+            self.logger.debug("Received result: " + id)
+            ResultsManager.set_result(id, result)
+            StateManager.delete_state(id)
+
+            self.executing_commands.remove(id)
+            abort_path = os.path.join(self.aborted_commands_path, id)
+            if os.path.exists(abort_path):
+                os.remove(abort_path)
+
+        self.execution_pool.apply_async(
+            execute_command, [result_id, command],
+            callback=on_completed)
+
+logger = logging.getLogger("worker")
+
+
+def execute_command(id, command):
+    try:
+        logger.debug('Execution started: ' + id)
+        StateManager.set_id(id)
+        value = command.execute()
+        logger.debug('Execution completed: ' + id)
+        return id, value
+    except Exception as err:
+        logger.debug("Execution failed: " + id)
+        logger.debug("Error was: " + str(err))
+
+        return id, ExecutionFailed(command, err)

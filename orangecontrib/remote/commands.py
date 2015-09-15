@@ -106,24 +106,6 @@ class Abort(Command):
     id = ""
 
 
-logger = logging.getLogger("worker")
-
-
-def execute_command(id, command):
-    #print("Executing command %s" % command)
-    try:
-        logger.debug('Execution started: ' + id)
-        StateManager.set_id(id)
-        value = command.execute()
-        logger.debug('Execution completed: ' + id)
-        return id, value
-    except Exception as err:
-        logger.debug("Execution failed: " + id)
-        logger.debug("Error was: " + str(err))
-
-        return id, ExecutionFailed(command, err)
-
-
 class ExecutionFailed:
     def __init__(self, command=None, error=None):
         if not command or not error:

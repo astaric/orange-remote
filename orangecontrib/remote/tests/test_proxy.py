@@ -10,7 +10,7 @@ from orangecontrib.remote.tests.dummies import DummyIterable, DummyClass
 from orangecontrib.remote.executors.multiprocessing import MultiprocessingExecutor
 
 
-class OrangeServerTests(unittest.TestCase):
+class ProxyTests(unittest.TestCase):
     server = server_thread = worker = worker_thread = None
 
     @classmethod
