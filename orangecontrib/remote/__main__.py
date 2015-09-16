@@ -35,11 +35,7 @@ def run_server():
 
     ExecutorCls = import_class(options.executor)
     executor = ExecutorCls()
-    executor_thread = threading.Thread(
-        name='Processing queue',
-        target=executor.run,
-        kwargs={'poll_interval': 1}
-    )
+
     httpd = socketserver.TCPServer((hostname, port),
                                    OrangeServer.inject(executor))
     httpd_thread = threading.Thread(
@@ -52,10 +48,12 @@ def run_server():
         if threading.current_thread().name != 'MainThread':
             return
         logging.info("Received a shutdown request")
-        executor.shutdown()
+
         httpd.shutdown()
         httpd_thread.join()
-        executor_thread.join()
+        executor.stop()
+        executor.join()
+
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
 
@@ -63,7 +61,7 @@ def run_server():
         Orange, exclude=["Orange.test", "Orange.canvas", "Orange.widgets"]))
 
     httpd_thread.start()
-    executor_thread.start()
+    executor.start()
 
     print("Starting Orange Server")
     print("Listening on port", port)

@@ -23,21 +23,17 @@ class ProxyTests(unittest.TestCase):
             target=cls.server.serve_forever,
             kwargs={'poll_interval': 0.01}
         )
-        cls.worker_thread = threading.Thread(
-            name='Processing thread',
-            target=cls.worker.run,
-            kwargs={'poll_interval': 0.01}
-        )
         cls.server_thread.start()
-        cls.worker_thread.start()
+        cls.worker.start()
 
     @classmethod
     def tearDownClass(cls):
         cls.server.shutdown()
         cls.server_thread.join()
-        cls.worker.shutdown()
-        cls.worker_thread.join()
         cls.server.server_close()
+
+        cls.worker.stop()
+        cls.worker.join()
 
     def setUp(self):
         self.proxy = self.create_proxy(DummyClass)

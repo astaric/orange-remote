@@ -21,7 +21,9 @@ class CeleryExecutor(Executor):
         self.id_mapping = {}
         self.observer = None
 
-    def _on_start(self):
+    def start(self):
+        super.start()
+
         class ResultsHandler(FileSystemEventHandler):
             def on_created(this, event):
                 _, result_id = os.path.split(event.src_path)
@@ -39,8 +41,12 @@ class CeleryExecutor(Executor):
         self.observer.schedule(LoggingEventHandler(), results_path)
         self.observer.start()
 
-    def _on_stop(self):
+    def stop(self):
+        super().stop()
         self.observer.stop()
+
+    def join(self):
+        super().join()
         self.observer.join()
 
     def _abort_command(self, command):

@@ -17,11 +17,6 @@ class OrangeServerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.worker = MultiprocessingExecutor()
-        cls.worker_thread = threading.Thread(
-            name='Processing queue',
-            target=cls.worker.run,
-            kwargs={'poll_interval': 1}
-        )
         cls.server = TCPServer(('localhost', 0),
                                OrangeServer.inject(cls.worker))
         cls.server_thread = threading.Thread(
@@ -30,14 +25,14 @@ class OrangeServerTests(unittest.TestCase):
             kwargs={'poll_interval': 0.01}
         )
         cls.server_thread.start()
-        cls.worker_thread.start()
+        cls.worker.start()
 
     @classmethod
     def tearDownClass(cls):
         cls.server.shutdown()
-        cls.worker.shutdown()
+        cls.worker.stop()
         cls.server_thread.join()
-        cls.worker_thread.join()
+        cls.worker.join()
         cls.server.server_close()
 
     def setUp(self):

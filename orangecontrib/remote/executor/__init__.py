@@ -1,5 +1,6 @@
 import logging
 import queue
+import threading
 
 from orangecontrib.remote.commands import Abort
 
@@ -9,11 +10,20 @@ class Executor:
 
     def __init__(self):
         self._execution_queue = queue.Queue()
-        self._is_running = True
+        self._is_running = False
+        self.thread = None
 
-    def run(self, poll_interval=1):
+    def start(self):
+        self._is_running = True
+        self.thread = threading.Thread(
+            name='Processing queue',
+            target=self._run,
+            kwargs={'poll_interval': 1}
+        )
+        self.thread.start()
+
+    def _run(self, poll_interval=1):
         self.logger.info("Executor started")
-        self._on_start()
 
         while self._is_running:
             try:
@@ -29,24 +39,20 @@ class Executor:
             except queue.Empty:
                 continue
 
-        self._on_stop()
-
-    def queue(self, command):
-        self._execution_queue.put(command)
-
-    def shutdown(self):
-        self._is_running = False
-        self._on_stop()
-        self.logger.info("Executor terminated")
-
-    def _on_start(self):
-        pass
-
-    def _on_stop(self):
-        pass
+        self.logger.info("Executor stopped")
 
     def _abort_command(self, command):
         raise NotImplementedError()
 
     def _execute_command(self, command, result_id):
         raise NotImplementedError()
+
+    def stop(self):
+        self._is_running = False
+
+    def join(self):
+        if self.thread is not None:
+            self.thread.join()
+
+    def queue(self, command):
+        self._execution_queue.put(command)

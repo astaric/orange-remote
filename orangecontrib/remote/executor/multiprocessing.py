@@ -18,14 +18,16 @@ class MultiprocessingExecutor(Executor):
         self.executing_commands = set()
         self.execution_pool = None
 
-    def _on_start(self):
+    def start(self):
+        super().start()
         self.execution_pool = multiprocessing.Pool()
 
-    def _on_stop(self):
-        self.logger.debug("Terminating execution pool")
+    def stop(self):
+        super().stop()
         self.execution_pool.terminate()
-        self.logger.debug("Joining execution pool")
+        self.logger.debug("Execution pool terminated")
         self.execution_pool.join()
+        self.logger.debug("Execution pool joined")
 
     def _abort_command(self, command):
         with open(os.path.join(self.aborted_commands_path, id), 'w'):
