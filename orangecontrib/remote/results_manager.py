@@ -2,29 +2,27 @@ import threading
 
 
 class ResultsManager:
-    results = {}
-    events = {}
+    def __init__(self):
+        self.results = {}
+        self.events = {}
 
-    @classmethod
-    def set_result(cls, id, result):
-        cls.results[id] = result
-        if id in cls.events:
-            cls.events[id].set()
+    def set_result(self, id, result):
+        self.results[id] = result
+        if id in self.events:
+            self.events[id].set()
 
-    @classmethod
-    def get_result(cls, id):
-        if id in cls.events:
-            cls.events[id].wait()
-        return cls.results[id]
+    def get_result(self, id):
+        if id in self.events:
+            self.events[id].wait()
+        return self.results[id]
 
-    @classmethod
-    def register_result(cls, id):
-        cls.events[id] = threading.Event()
+    def register_result(self, id):
+        self.events[id] = threading.Event()
 
-    @classmethod
-    def has_result(cls, resource_id):
-        return resource_id in cls.results
+    def has_result(self, resource_id):
+        return resource_id in self.results
 
-    @classmethod
-    def awaiting_result(cls, resource_id):
-        return resource_id in cls.events
+    def awaiting_result(self, resource_id):
+        return resource_id in self.events
+
+ResultsManager = ResultsManager()
